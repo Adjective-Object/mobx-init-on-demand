@@ -246,6 +246,8 @@ describe('MobxLateInitObservableObject', () => {
         }
 
         for (let [name, thisComparer] of [
+            ['javascript loose equality', (a, b) => a == b],
+            ['javascript strict equality', (a, b) => a === b],
             ['JSON.stringify', (a, b) => JSON.stringify([a, b])],
             ['mobx comparer.structural', comparer.structural],
             ['mobx comparer.shallow', comparer.shallow],
@@ -258,7 +260,7 @@ describe('MobxLateInitObservableObject', () => {
                         case1,
                     )}) to ${JSON.stringify(
                         case2,
-                    )} the same as if it were unwrapped`, () => {
+                    )} the same as if it were wrapped by mobx`, () => {
                         const mobxOut = thisComparer(observable(case1), case2);
 
                         const wrappedMobxOut = thisComparer(
