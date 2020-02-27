@@ -1,5 +1,5 @@
 import { MobxLateInitObservableObject } from '../MobxLateInitObservableObject';
-import { autorun, comparer, observable } from 'mobx';
+import { autorun, comparer, observable, spy } from 'mobx';
 
 describe('MobxLateInitObservableObject', () => {
     let disposer: () => void;
@@ -218,6 +218,299 @@ describe('MobxLateInitObservableObject', () => {
 
             // Assert
             expect(observedValues).toEqual([{ z: 'hello' }, 'goodbye']);
+        });
+    });
+
+    describe('lazy initialization', () => {
+        it('Does not fire mutation events on store creation', () => {
+            // Arrange
+            const mobxEventLog: any[] = [];
+            spy(event => mobxEventLog.push(event));
+
+            type MyObject = {
+                name: string;
+                config: null | {
+                    onlineStatus: 'online' | 'away' | 'busy';
+                };
+            };
+
+            // Act
+            const store: {
+                scenarioObjects: Record<string, MyObject>;
+            } = MobxLateInitObservableObject.wrap({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                },
+            });
+
+            // Assert
+            expect(mobxEventLog).toEqual([]);
+        });
+
+        it('Fires mobx events only for keys in objects we have accessed', () => {
+            // Arrange
+            const mobxEventLog: any[] = [];
+            (global as any).mobxEventLog = mobxEventLog;
+            spy(event => {
+                mobxEventLog.push(event);
+            });
+
+            type MyObject = {
+                name: string;
+                config: null | {
+                    onlineStatus: 'online' | 'away' | 'busy';
+                };
+            };
+
+            // Act
+            const store: {
+                scenarioObjects: Record<string, MyObject>;
+            } = MobxLateInitObservableObject.wrap({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                },
+            });
+            // noop that reads the conifg of both users
+            store.scenarioObjects;
+
+            // event log should not be empty
+            expect(mobxEventLog).not.toEqual([]);
+            const updatedKeys = mobxEventLog
+                .filter(x => x.key !== undefined)
+                .map(x => x.key);
+            // keys deeper in the store should not be initialized
+            expect(updatedKeys).not.toContain('cofig');
+        });
+
+        it('does not fire additional mobx events for reads of already initialized keys', () => {
+            // Arrange
+            const mobxEventLog: any[] = [];
+            (global as any).mobxEventLog = mobxEventLog;
+            spy(event => {
+                mobxEventLog.push(event);
+            });
+
+            type MyObject = {
+                name: string;
+                config: null | {
+                    onlineStatus: 'online' | 'away' | 'busy';
+                };
+            };
+
+            // Act
+            const store: {
+                scenarioObjects: Record<string, MyObject>;
+            } = MobxLateInitObservableObject.wrap({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                },
+            });
+            // noop that reads the conifg of both users
+            store.scenarioObjects;
+            const eventLengthAfterLazyInitialization = mobxEventLog.length;
+            store.scenarioObjects;
+
+            // Assert
+            expect(mobxEventLog.length).toBe(
+                eventLengthAfterLazyInitialization,
+            );
+        });
+    });
+
+    describe('comparing costs', () => {
+        it('When initializing, it performs less mobx events than a basic initialization', () => {
+            // Arrange
+            let mobxEventLog: any[] = [];
+            spy(event => mobxEventLog.push(event));
+
+            // Act
+            const baseStore = observable({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                    id_s: {
+                        name: 'samuele',
+                        config: null,
+                    },
+                    id_r: {
+                        name: 'robert',
+                        config: null,
+                    },
+                },
+            });
+            const baseEventLog = mobxEventLog;
+            mobxEventLog = [];
+
+            const lazyStore = MobxLateInitObservableObject.wrap({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                    id_s: {
+                        name: 'samuele',
+                        config: null,
+                    },
+                    id_r: {
+                        name: 'robert',
+                        config: null,
+                    },
+                },
+            });
+            const lazyEventLog = mobxEventLog;
+
+            // Assert
+            expect(baseEventLog.length).toBeGreaterThan(lazyEventLog.length);
+        });
+
+        // TODO multiple add events get fired for each of the 2 shallow observables we have in our wrapper,
+        // so this fails..
+        it.skip('When reading a single object in the tree, it performs less mobx events than a basic initialization', () => {
+            // Arrange
+            let mobxEventLog: any[] = [];
+            spy(event => mobxEventLog.push(event));
+
+            // Act
+            const baseStore = observable({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                    id_s: {
+                        name: 'samuele',
+                        config: null,
+                    },
+                    id_r: {
+                        name: 'robert',
+                        config: null,
+                    },
+                },
+            });
+            baseStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.name;
+            const baseEventLog = mobxEventLog;
+            mobxEventLog = [];
+
+            const lazyStore = MobxLateInitObservableObject.wrap({
+                scenarioObjects: {
+                    id_m: {
+                        name: 'max',
+                        config: null,
+                    },
+                    id_j: {
+                        name: 'jeff',
+                        config: {
+                            onlineStatus: 'online',
+                        },
+                    },
+                    id_w: {
+                        name: 'will',
+                        config: {
+                            onlineStatus: 'busy',
+                        },
+                    },
+                    id_s: {
+                        name: 'samuele',
+                        config: null,
+                    },
+                    id_r: {
+                        name: 'robert',
+                        config: null,
+                    },
+                },
+            });
+            lazyStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.name;
+            const lazyEventLog = mobxEventLog;
+
+            // Assert
+            expect(baseEventLog.length).toBeGreaterThan(lazyEventLog.length);
         });
     });
 

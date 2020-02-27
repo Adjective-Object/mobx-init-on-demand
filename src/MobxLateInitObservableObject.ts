@@ -1,15 +1,8 @@
-import { observable, decorate, toJS, transaction } from 'mobx';
+import { observable, decorate, transaction, isObservable } from 'mobx';
 
 function isObject(value: any): value is object {
     return value !== null && typeof value === 'object';
 }
-
-// type of decorators in `mobx.decorate(foo, decorators)`
-type MobxDecorator =
-    | MethodDecorator
-    | PropertyDecorator
-    | Array<MethodDecorator>
-    | Array<PropertyDecorator>;
 
 const UninitializedObjectSymbol = Symbol('mlioo.no-object');
 
@@ -18,12 +11,6 @@ type InitializedSubObjects<T extends object> = {
         ? MobxLateInitObservableObject<T[K]> | typeof UninitializedObjectSymbol
         : typeof UninitializedObjectSymbol;
 };
-
-type PartialDecoratorMap<T extends object> = Partial<
-    {
-        [K in keyof T]: MobxDecorator;
-    }
->;
 
 /**
  * Wraps a shallow mobx observable object and initializes only those
@@ -38,22 +25,25 @@ export class MobxLateInitObservableObject<T extends object> {
     /**
      * Scalar values are stored here
      */
-    private _scalarsAndUninitializedSubObjects: any;
+    _scalarsAndUninitializedSubObjects: any;
     /**
      * Objects are stored here, and wrapped again ian a MobxLateInitObservableObject
      */
-    @observable.shallow _initializedSubObjects: InitializedSubObjects<T>;
+    _initializedSubObjects: InitializedSubObjects<T>;
 
     static wrap<T extends object>(wrappedObject: T): T {
-        const wrapped = new MobxLateInitObservableObject(wrappedObject);
+        let wrapped = transaction(
+            () => new MobxLateInitObservableObject(wrappedObject),
+        );
+
         const proxyObject = {};
 
         for (let _key of Reflect.ownKeys(wrappedObject)) {
             const key = _key as keyof T;
             // define accessors on this object that proxy property reads
             Object.defineProperty(proxyObject, key, {
-                get: wrapped._readProperty.bind(wrapped, key),
-                set: wrapped._writeProperty.bind(wrapped, key),
+                get: wrapped!._readProperty.bind(wrapped!, key),
+                set: wrapped!._writeProperty.bind(wrapped!, key),
                 enumerable: true,
             });
         }
@@ -62,33 +52,24 @@ export class MobxLateInitObservableObject<T extends object> {
     }
 
     private constructor(wrappedObject: T) {
-        const scalarDecorators: PartialDecoratorMap<T> = {};
         const emptySubObject: Partial<
             { [K in keyof T]: typeof UninitializedObjectSymbol }
         > = {};
         for (let _key of Reflect.ownKeys(wrappedObject)) {
             const key = _key as keyof T;
-            // make all scalar keys of the wrapped object observable
-            if (!isObject(wrappedObject[key])) {
-                scalarDecorators[key] = observable;
-            }
             // make the subobject fully observable
             emptySubObject[key] = UninitializedObjectSymbol;
         }
 
-        this._scalarsAndUninitializedSubObjects = decorate(
-            // Create a shallow copy of the object when decorating it,
-            // so we don't mutate the original object during initialization
-            { ...wrappedObject },
-            scalarDecorators,
-        );
-
+        this._scalarsAndUninitializedSubObjects = wrappedObject;
         this._initializedSubObjects = emptySubObject as InitializedSubObjects<
             T
         >;
     }
 
     private _readProperty(propertyName: keyof T) {
+        this.ensureDecorated();
+
         // If the value is stored as a scalar
         if (
             this._initializedSubObjects[propertyName] ===
@@ -114,6 +95,8 @@ export class MobxLateInitObservableObject<T extends object> {
         propertyName: TKey,
         newValue: any,
     ) {
+        this.ensureDecorated();
+
         // Perform in a transaction so any observers triggered by clearing observable values
         // read back updated values first.
         transaction(() => {
@@ -153,6 +136,20 @@ export class MobxLateInitObservableObject<T extends object> {
             this._initializedSubObjects[
                 propertyName
             ] = MobxLateInitObservableObject.wrap(newValue) as any;
+        });
+    }
+
+    private ensureDecorated() {
+        if (isObservable(this)) {
+            return;
+        }
+
+        // initialize this with decorate after values have been set,
+        // because otherwise we trigger an extra mobx update trigger
+        // when we set the values above.
+        decorate(this, {
+            _scalarsAndUninitializedSubObjects: observable.shallow,
+            _initializedSubObjects: observable.shallow,
         });
     }
 }
