@@ -436,7 +436,7 @@ describe('MobxLateInitObservableObject', () => {
 
         // TODO multiple add events get fired for each of the 2 shallow observables we have in our wrapper,
         // so this fails..
-        it.skip('When reading a single object in the tree, it performs less mobx events than a basic initialization', () => {
+        it('When scalar properties from a single object in the tree, it performs less mobx events than a basic initialization', () => {
             // Arrange
             let mobxEventLog: any[] = [];
             spy(event => mobxEventLog.push(event));
@@ -471,8 +471,7 @@ describe('MobxLateInitObservableObject', () => {
                 },
             });
             baseStore.scenarioObjects.id_w.name;
-            baseStore.scenarioObjects.id_w.name;
-            baseStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.config?.onlineStatus;
             const baseEventLog = mobxEventLog;
             mobxEventLog = [];
 
@@ -505,8 +504,7 @@ describe('MobxLateInitObservableObject', () => {
                 },
             });
             lazyStore.scenarioObjects.id_w.name;
-            baseStore.scenarioObjects.id_w.name;
-            baseStore.scenarioObjects.id_w.name;
+            baseStore.scenarioObjects.id_w.config?.onlineStatus;
             const lazyEventLog = mobxEventLog;
 
             // Assert
