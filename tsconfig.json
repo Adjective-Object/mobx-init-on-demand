@@ -16,6 +16,6 @@
         "strict": true,
         "experimentalDecorators": true
     },
-    "include": ["src"],
+    "include": ["src", "integration-test/mobx-shim"],
     "exclude": ["node_modules", "build", "scripts"]
 }

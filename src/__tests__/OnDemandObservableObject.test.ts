@@ -1,15 +1,28 @@
-import { MobxLateInitObservableObject } from '../MobxLateInitObservableObject';
-import { autorun, comparer, observable, spy } from 'mobx';
+import { OnDemandObservableObject } from '../OnDemandObservableObject';
+import {
+    autorun,
+    comparer,
+    observable,
+    spy,
+    isObservable,
+    isObservableObject,
+} from 'mobx';
+import { setObservableWrapper } from '../wrapWithDI';
+import { wrapAsOnDemandObservable } from '../wrapAsOnDemandObservable';
 
-describe('MobxLateInitObservableObject', () => {
+describe('OnDemandObservableObject', () => {
     let disposer: () => void;
+    beforeEach(() => {
+        setObservableWrapper(wrapAsOnDemandObservable);
+    });
+
     afterEach(() => {
         disposer && disposer();
     });
 
     describe('reading and writing scalars on an object', () => {
         it('reads the initial value correctly', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: '1',
             });
 
@@ -17,7 +30,7 @@ describe('MobxLateInitObservableObject', () => {
         });
 
         it('reads updated values', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: '1',
             });
 
@@ -28,7 +41,7 @@ describe('MobxLateInitObservableObject', () => {
 
         it('triggers listeners to the wrapped properties on overwrite', () => {
             // Arrange
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: '1',
             });
 
@@ -47,7 +60,7 @@ describe('MobxLateInitObservableObject', () => {
 
     describe('reading and writing scalars on a subobject', () => {
         it('reads the initial value correctly', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -57,7 +70,7 @@ describe('MobxLateInitObservableObject', () => {
         });
 
         it('reads updated values', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -70,7 +83,7 @@ describe('MobxLateInitObservableObject', () => {
 
         it('triggers listeners to the wrapped properties on overwrite', () => {
             // Arrange
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -91,7 +104,7 @@ describe('MobxLateInitObservableObject', () => {
 
     describe('reading and writing subobjects', () => {
         it('reads the initial value correctly', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -101,7 +114,7 @@ describe('MobxLateInitObservableObject', () => {
         });
 
         it('reads updated values', () => {
-            const wrappedObservable = MobxLateInitObservableObject.wrap({
+            const wrappedObservable = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -118,7 +131,7 @@ describe('MobxLateInitObservableObject', () => {
             // Arrange
             const wrappedObservable: {
                 a: any;
-            } = MobxLateInitObservableObject.wrap({
+            } = OnDemandObservableObject.wrap({
                 a: {
                     b: 1,
                 },
@@ -147,7 +160,7 @@ describe('MobxLateInitObservableObject', () => {
     describe("changing the type of a property over the object's lifetime from scalar => object", () => {
         it('reads the updated value', () => {
             // Arrange
-            const wrappedObservable: any = MobxLateInitObservableObject.wrap({
+            const wrappedObservable: any = OnDemandObservableObject.wrap({
                 a: 1,
             });
 
@@ -164,7 +177,7 @@ describe('MobxLateInitObservableObject', () => {
 
         it('triggers observers when changing from scalar => object', () => {
             // Arrange
-            const wrappedObservable: any = MobxLateInitObservableObject.wrap({
+            const wrappedObservable: any = OnDemandObservableObject.wrap({
                 a: 1,
             });
 
@@ -191,7 +204,7 @@ describe('MobxLateInitObservableObject', () => {
     describe("changing the type of a property over the object's lifetime from object => scalar", () => {
         it('reads the updated value', () => {
             // Arrange
-            const wrappedObservable: any = MobxLateInitObservableObject.wrap({
+            const wrappedObservable: any = OnDemandObservableObject.wrap({
                 a: { z: 'hello' },
             });
 
@@ -204,7 +217,7 @@ describe('MobxLateInitObservableObject', () => {
 
         it('triggers observers when changing from object => scalar', () => {
             // Arrange
-            const wrappedObservable: any = MobxLateInitObservableObject.wrap({
+            const wrappedObservable: any = OnDemandObservableObject.wrap({
                 a: { z: 'hello' },
             });
 
@@ -237,7 +250,7 @@ describe('MobxLateInitObservableObject', () => {
             // Act
             const store: {
                 scenarioObjects: Record<string, MyObject>;
-            } = MobxLateInitObservableObject.wrap({
+            } = OnDemandObservableObject.wrap({
                 scenarioObjects: {
                     id_m: {
                         name: 'max',
@@ -280,7 +293,7 @@ describe('MobxLateInitObservableObject', () => {
             // Act
             const store: {
                 scenarioObjects: Record<string, MyObject>;
-            } = MobxLateInitObservableObject.wrap({
+            } = OnDemandObservableObject.wrap({
                 scenarioObjects: {
                     id_m: {
                         name: 'max',
@@ -330,7 +343,7 @@ describe('MobxLateInitObservableObject', () => {
             // Act
             const store: {
                 scenarioObjects: Record<string, MyObject>;
-            } = MobxLateInitObservableObject.wrap({
+            } = OnDemandObservableObject.wrap({
                 scenarioObjects: {
                     id_m: {
                         name: 'max',
@@ -400,7 +413,7 @@ describe('MobxLateInitObservableObject', () => {
             const baseEventLog = mobxEventLog;
             mobxEventLog = [];
 
-            const lazyStore = MobxLateInitObservableObject.wrap({
+            const lazyStore = OnDemandObservableObject.wrap({
                 scenarioObjects: {
                     id_m: {
                         name: 'max',
@@ -475,7 +488,7 @@ describe('MobxLateInitObservableObject', () => {
             const baseEventLog = mobxEventLog;
             mobxEventLog = [];
 
-            const lazyStore = MobxLateInitObservableObject.wrap({
+            const lazyStore = OnDemandObservableObject.wrap({
                 scenarioObjects: {
                     id_m: {
                         name: 'max',
@@ -555,7 +568,7 @@ describe('MobxLateInitObservableObject', () => {
                         const mobxOut = thisComparer(observable(case1), case2);
 
                         const wrappedMobxOut = thisComparer(
-                            MobxLateInitObservableObject.wrap(case1),
+                            OnDemandObservableObject.wrap(case1),
                             case2,
                         );
 
@@ -564,5 +577,17 @@ describe('MobxLateInitObservableObject', () => {
                 }
             });
         }
+    });
+
+    describe.skip('mobx interop', () => {
+        it('is an observable object', () => {
+            const x = OnDemandObservableObject.wrap({});
+            expect(isObservableObject(x)).toBe(true);
+        });
+
+        it('passes isObservable', () => {
+            const x = OnDemandObservableObject.wrap({});
+            expect(isObservable(x)).toBe(true);
+        });
     });
 });

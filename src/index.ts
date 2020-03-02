@@ -1,4 +1,3 @@
-import { MobxLateInitObservableObject } from './MobxLateInitObservableObject';
-
-export const observableOnDemand = <T extends object>(o: T): T =>
-    MobxLateInitObservableObject.wrap(o);
+export { OnDemandObservableObject } from './OnDemandObservableObject';
+export { OnDemandObservableMap } from './OnDemandObservableMap';
+export { wrapAsOnDemandObservable as observableOnDemand } from './wrapAsOnDemandObservable';

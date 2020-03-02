@@ -1,14 +1,11 @@
 import { observable, decorate, transaction, isObservable } from 'mobx';
+import { MobxLateInitWrappedSymbol } from './constants';
+import { isOnDemandObservable } from './isOnDemandObservable';
+import { wrapObservable } from './wrapWithDI';
 
-function isObject(value: any): value is object {
+export function isObject(value: any): value is object {
     return value !== null && typeof value === 'object';
 }
-
-function isWrappedObject(value: object) {
-    return !!Reflect.get(value, MobxLateInitWrappedSymbol);
-}
-
-const MobxLateInitWrappedSymbol = Symbol('mlioo.wrapped');
 
 /**
  * Wraps a shallow mobx observable object and initializes only those
@@ -19,15 +16,19 @@ const MobxLateInitWrappedSymbol = Symbol('mlioo.wrapped');
  * When first read, properties with non-scalar values are put in the _wrappedInternal map,
  * and wrapped in another MobxLateInitObservableObject
  */
-export class MobxLateInitObservableObject<T extends object> {
+export class OnDemandObservableObject<T extends object> {
     /**
      * Scalar values are stored here
      */
     _internal: any;
 
     static wrap<T extends object>(wrappedObject: T): T {
+        if (!isObject(wrappedObject)) {
+            return wrappedObject;
+        }
+
         let wrapped = transaction(
-            () => new MobxLateInitObservableObject(wrappedObject),
+            () => new OnDemandObservableObject(wrappedObject),
         );
 
         const proxyObject = {};
@@ -63,8 +64,8 @@ export class MobxLateInitObservableObject<T extends object> {
         }
 
         // If the object is not wrapped yet, wrap it.
-        if (!isWrappedObject(this._internal[propertyName])) {
-            this._internal[propertyName] = MobxLateInitObservableObject.wrap(
+        if (!isOnDemandObservable(this._internal[propertyName])) {
+            this._internal[propertyName] = wrapObservable(
                 this._internal[propertyName],
             );
         }
@@ -86,9 +87,9 @@ export class MobxLateInitObservableObject<T extends object> {
             }
 
             // we are writing an object
-            this._internal[propertyName] = isWrappedObject(newValue)
+            this._internal[propertyName] = isOnDemandObservable(newValue)
                 ? newValue
-                : (MobxLateInitObservableObject.wrap(newValue) as any);
+                : (OnDemandObservableObject.wrap(newValue) as any);
         });
     }
 

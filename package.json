@@ -1,6 +1,6 @@
 {
     "name": "mobx-init-on-demand",
-    "version": "0.0.4",
+    "version": "0.0.3",
     "author": "Max Huang-Hobbs <mhuan13@gmail.com>",
     "license": "MIT",
     "main": "dist/index.js",
@@ -10,7 +10,10 @@
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -cw",
-        "format": "prettier --write './src/**.ts'"
+        "format": "prettier --write './src/**.ts'",
+        "test": "yarn test:scripts; yarn test:integration",
+        "test:scripts": "jest",
+        "test:integration": "./integration-test/scripts/run-all-tests.sh"
     },
     "dependencies": {
         "mobx": "^5.15.1"
@@ -23,6 +26,7 @@
         "mz": "^2.7.0",
         "prettier": "^1.19.1",
         "rollup": "^1.17.0",
+        "rollup-plugin-copy": "^3.3.0",
         "rollup-plugin-typescript2": "^0.22.0",
         "ts-jest": "^24.1.0",
         "typescript": "^3.7.2"
