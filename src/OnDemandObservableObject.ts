@@ -89,7 +89,7 @@ export class OnDemandObservableObject<T extends object> {
             // we are writing an object
             this._internal[propertyName] = isOnDemandObservable(newValue)
                 ? newValue
-                : (OnDemandObservableObject.wrap(newValue) as any);
+                : (wrapObservable(newValue) as any);
         });
     }
 

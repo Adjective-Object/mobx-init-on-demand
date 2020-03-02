@@ -9,6 +9,8 @@ import {
 } from 'mobx';
 import { setObservableWrapper } from '../wrapWithDI';
 import { wrapAsOnDemandObservable } from '../wrapAsOnDemandObservable';
+import { isOnDemandObservable } from '../isOnDemandObservable';
+import OnDemandObservableArray from '../OnDemandObservableArray';
 
 describe('OnDemandObservableObject', () => {
     let disposer: () => void;
@@ -375,6 +377,56 @@ describe('OnDemandObservableObject', () => {
         });
     });
 
+    describe('when an array is added to the wrapped object', () => {
+        it('reads initial values in the array correctly', () => {
+            const wrappedObservable = OnDemandObservableObject.wrap({
+                a: ['1', '2'],
+            });
+
+            expect(wrappedObservable.a[0]).toEqual('1');
+            expect(wrappedObservable.a[1]).toEqual('2');
+        });
+
+        it('wraps internal objects when read', () => {
+            const wrappedObservable = OnDemandObservableObject.wrap({
+                a: ['1', '2'],
+            });
+
+            expect(isOnDemandObservable(wrappedObservable.a)).toBe(true);
+            expect(wrappedObservable.a).toBeInstanceOf(OnDemandObservableArray);
+        });
+
+        it('reads updated values in the array', () => {
+            const wrappedObservable = OnDemandObservableObject.wrap({
+                a: ['1', '2'],
+            });
+
+            // Act
+            wrappedObservable.a[1] = '3';
+
+            expect(wrappedObservable.a[0]).toEqual('1');
+            expect(wrappedObservable.a[1]).toEqual('3');
+        });
+
+        it('triggers listeners to the wrapped properties on overwrite', () => {
+            // Arrange
+            const wrappedObservable = OnDemandObservableObject.wrap({
+                a: ['1', '2'],
+            });
+
+            const observedValues: string[] = [];
+            disposer = autorun(() => {
+                observedValues.push(wrappedObservable.a[0]);
+            });
+
+            // Act
+            wrappedObservable.a[0] = 'hello';
+
+            // Assert
+            expect(observedValues).toEqual(['1', 'hello']);
+        });
+    });
+
     describe('comparing costs', () => {
         it('When initializing, it performs less mobx events than a basic initialization', () => {
             // Arrange
@@ -447,8 +499,6 @@ describe('OnDemandObservableObject', () => {
             expect(baseEventLog.length).toBeGreaterThan(lazyEventLog.length);
         });
 
-        // TODO multiple add events get fired for each of the 2 shallow observables we have in our wrapper,
-        // so this fails..
         it('When scalar properties from a single object in the tree, it performs less mobx events than a basic initialization', () => {
             // Arrange
             let mobxEventLog: any[] = [];
