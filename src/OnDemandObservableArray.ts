@@ -16,7 +16,7 @@ export function isObject(value: any): value is object {
  * When first read, properties with non-scalar values are put in the _wrappedInternal map,
  * and wrapped in another MobxLateInitObservableObject
  */
-class OnDemandObservableArray<T> implements Array<T> {
+class _OnDemandObservableArray<T> implements Array<T> {
     /**
      * Internal lazily-initialized observable
      */
@@ -121,14 +121,14 @@ type ReturnOf<TFunc> = TFunc extends (...args: any[]) => infer TReturn
     ? TReturn
     : never;
 
-interface OnDemandObservableArray<T> extends Array<T> {}
+interface _OnDemandObservableArray<T> extends Array<T> {}
 
 function wrapArrayMethod<TKey extends keyof Array<any>>(
     name: TKey,
     isAccessor?: boolean,
 ) {
-    (OnDemandObservableArray.prototype as any)[name] = function<TValue>(
-        this: OnDemandObservableArray<TValue>,
+    (_OnDemandObservableArray.prototype as any)[name] = function<TValue>(
+        this: _OnDemandObservableArray<TValue>,
         ...args: ArgsOf<Array<TValue>[TKey]>
     ): ReturnOf<Array<TValue>[TKey]> {
         if (isAccessor) {
@@ -143,7 +143,7 @@ function wrapArrayMethod<TKey extends keyof Array<any>>(
 
         return toRet;
     };
-    Object.defineProperty(OnDemandObservableArray.prototype, name, {
+    Object.defineProperty(_OnDemandObservableArray.prototype, name, {
         enumerable: false,
     });
 }
@@ -184,7 +184,7 @@ wrapArrayMethod('some', true);
 wrapArrayMethod('values', true);
 
 Object.defineProperty(
-    OnDemandObservableArray.prototype,
+    _OnDemandObservableArray.prototype,
     MobxLateInitWrappedSymbol,
     {
         get: () => true,
@@ -192,4 +192,5 @@ Object.defineProperty(
     },
 );
 
-export default OnDemandObservableArray;
+export const OnDemandObservableArray = _OnDemandObservableArray;
+export type OnDemandObservableArray<T> = _OnDemandObservableArray<T>;

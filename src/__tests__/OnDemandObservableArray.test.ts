@@ -1,7 +1,7 @@
 import { autorun, isObservable, isObservableArray } from 'mobx';
 import { setObservableWrapper } from '../wrapWithDI';
 import { wrapAsOnDemandObservable } from '../wrapAsOnDemandObservable';
-import OnDemandObservableArray from '../OnDemandObservableArray';
+import { OnDemandObservableArray } from '../OnDemandObservableArray';
 
 describe('OnDemandObservableArray', () => {
     let disposer: () => void;

@@ -79,4 +79,5 @@ export class OnDemandObservableMap<K = any, V = any> {
 // Trick mobx internals into treating this as an observable map
 Object.defineProperty(OnDemandObservableMap.prototype, 'isMobXObservableMap', {
     enumerable: false,
+    get: () => true,
 });

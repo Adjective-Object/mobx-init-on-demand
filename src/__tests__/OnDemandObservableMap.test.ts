@@ -169,7 +169,7 @@ describe('OnDemandObservableMap', () => {
         expect(results).toEqual([]);
     });
 
-    it.only('can not be iterated over with for..in (enumerable properties), even after wrapping', () => {
+    it('can not be iterated over with for..in (enumerable properties), even after wrapping', () => {
         const x = new OnDemandObservableMap<string, number>({
             a: 1,
             b: 2,

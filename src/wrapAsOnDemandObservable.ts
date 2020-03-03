@@ -1,7 +1,7 @@
 import { observable, ObservableSet } from 'mobx';
 import { OnDemandObservableMap } from './OnDemandObservableMap';
 import { OnDemandObservableObject } from './OnDemandObservableObject';
-import OnDemandObservableArray from './OnDemandObservableArray';
+import { OnDemandObservableArray } from './OnDemandObservableArray';
 
 export function wrapAsOnDemandObservable<K, V>(
     x: Map<K, V> | OnDemandObservableMap<K, V>,

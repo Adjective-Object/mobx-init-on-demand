@@ -10,7 +10,7 @@ import {
 import { setObservableWrapper } from '../wrapWithDI';
 import { wrapAsOnDemandObservable } from '../wrapAsOnDemandObservable';
 import { isOnDemandObservable } from '../isOnDemandObservable';
-import OnDemandObservableArray from '../OnDemandObservableArray';
+import { OnDemandObservableArray } from '../OnDemandObservableArray';
 
 describe('OnDemandObservableObject', () => {
     let disposer: () => void;
