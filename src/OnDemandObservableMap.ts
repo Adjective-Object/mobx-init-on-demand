@@ -10,6 +10,10 @@ export class OnDemandObservableMap<K = any, V = any> {
                 ? initialObject
                 : new Map(Object.entries(initialObject))
             : new Map();
+        // hide _inner on the object
+        Object.defineProperty(this, '_inner', {
+            enumerable: false,
+        });
     }
 
     public get(k: K): V | undefined {
@@ -28,14 +32,39 @@ export class OnDemandObservableMap<K = any, V = any> {
         return this._inner.has(k);
     }
 
+    public delete(k: K): boolean {
+        return this._inner.delete(k);
+    }
+
     public entries(): IterableIterator<[K, V]> {
         this.ensureWrapped();
         return this._inner.entries();
     }
 
-    public delete(k: K): boolean {
+    public keys(): IterableIterator<K> {
         this.ensureWrapped();
-        return this._inner.delete(k);
+        return this._inner.keys();
+    }
+
+    public values(): IterableIterator<V> {
+        this.ensureWrapped();
+        return this._inner.values();
+    }
+
+    public forEach(cb: (v: V, k: K, map: Map<K, V>) => void): void {
+        this.ensureWrapped();
+        return this._inner.forEach((v, k) => {
+            cb(v, k, this as any);
+        });
+    }
+
+    public get size() {
+        this.ensureWrapped();
+        return this._inner.size;
+    }
+
+    [Symbol.iterator]() {
+        return this.entries();
     }
 
     private ensureWrapped() {
@@ -45,9 +74,9 @@ export class OnDemandObservableMap<K = any, V = any> {
             });
         }
     }
-
-    // TODO iteration
 }
 
 // Trick mobx internals into treating this as an observable map
-(OnDemandObservableMap.prototype as any).isMobXObservableMap = true;
+Object.defineProperty(OnDemandObservableMap.prototype, 'isMobXObservableMap', {
+    enumerable: false,
+});

@@ -76,6 +76,137 @@ describe('OnDemandObservableMap', () => {
         ]);
     });
 
+    it('reacts to size changes', () => {
+        // Arrange
+        const x = new OnDemandObservableMap<string, object>({});
+        const observedValues: number[] = [];
+        disposer = autorun(() => {
+            observedValues.push(x.size);
+        });
+
+        // Act
+        x.set('a', { hello: 'goodbye' });
+        x.set('b', { hello: 'goodbye' });
+        x.delete('c');
+        x.delete('b');
+
+        // Assert
+        expect(observedValues).toEqual([0, 1, 2, 1]);
+    });
+
+    it('can get entries', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            c: 3,
+        });
+
+        expect(Array.from(x.entries())).toEqual([
+            ['a', 1],
+            ['b', 2],
+            ['c', 3],
+        ]);
+    });
+
+    it('can get keys', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            c: 3,
+        });
+
+        expect(Array.from(x.keys())).toEqual(
+            jasmine.arrayContaining(['a', 'b', 'c']),
+        );
+        expect(Array.from(x.keys()).length).toBe(3);
+    });
+
+    it('can get keys in insertion order', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            d: 3,
+        });
+
+        x.set('c', 4);
+
+        expect(Array.from(x.keys())).toEqual(['a', 'b', 'd', 'c']);
+    });
+
+    it('can be iterated over with for..of (iterator)', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            c: 3,
+        });
+
+        const results: any[] = [];
+
+        for (let iteratedValue of x) {
+            results.push(iteratedValue);
+        }
+
+        expect(results).toEqual([
+            ['a', 1],
+            ['b', 2],
+            ['c', 3],
+        ]);
+    });
+
+    it('can not be iterated over with for..in (enumerable properties)', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            d: 3,
+        });
+
+        const results: any[] = [];
+
+        for (let iteratedValue in x) {
+            results.push(iteratedValue);
+        }
+
+        expect(results).toEqual([]);
+    });
+
+    it.only('can not be iterated over with for..in (enumerable properties), even after wrapping', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            d: 3,
+        });
+
+        x.entries();
+
+        const results: any[] = [];
+
+        for (let iteratedValue in x) {
+            results.push(iteratedValue);
+        }
+
+        expect(results).toEqual([]);
+    });
+
+    it('can be iterated over with forEach', () => {
+        const x = new OnDemandObservableMap<string, number>({
+            a: 1,
+            b: 2,
+            d: 3,
+        });
+
+        const results: any[] = [];
+
+        x.forEach((v, k, map) => {
+            results.push([v, k, map]);
+        });
+
+        expect(results).toEqual([
+            [1, 'a', x],
+            [2, 'b', x],
+            [3, 'd', x],
+        ]);
+    });
+
     describe('mobx interop', () => {
         it('is an observable map', () => {
             let x = new OnDemandObservableMap({});
