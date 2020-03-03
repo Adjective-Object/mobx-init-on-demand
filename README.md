@@ -27,7 +27,9 @@ autorun(() => {
 yarn # install dependencies
 yarn build # build.             Can also use `rollup -c`
 yarn watch # build with watch.  Can also use `rollup -cw`
-yarn jest # run tests
+yarn test # run all tests
+yarn jest # run local tests
+yarn test:integration # run open-source repo tests
 ```
 
 run an integration test against an open-source repo. see [`./integration-test`](./integration-test/README.md) for more details.
