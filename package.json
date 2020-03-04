@@ -11,7 +11,7 @@
         "build": "rollup -c",
         "watch": "rollup -cw",
         "format": "prettier --write './src/**.ts'",
-        "test": "yarn test:scripts; yarn test:integration",
+        "test": "yarn test:scripts && yarn test:integration",
         "test:scripts": "jest",
         "test:integration": "./integration-test/scripts/run-all-tests.sh"
     },

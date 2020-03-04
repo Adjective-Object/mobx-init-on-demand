@@ -1,5 +1,5 @@
-import { MobxLateInitWrappedSymbol } from './constants';
+import { MobxLateInitInnerSymbol } from './constants';
 
 export function isOnDemandObservable(value: object) {
-    return !!Reflect.get(value, MobxLateInitWrappedSymbol);
+    return !!Reflect.get(value, MobxLateInitInnerSymbol);
 }

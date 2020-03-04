@@ -1,83 +1,85 @@
 import { ObservableMap, isObservableMap, isObservable, observable } from 'mobx';
+import { OnDemandObservable } from './OnDemandObservable';
+import { MobxLateInitInnerSymbol } from './constants';
+import { wrapMethod } from './wrapMethod';
 import { wrapObservable } from './wrapWithDI';
 
-export class OnDemandObservableMap<K = any, V = any> {
-    private _inner: Map<K, V> | ObservableMap<K, V>;
+class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
+    Map<K, V> | ObservableMap<K, V>
+> {
     // Trick mobx internals into treating this map as a mobx map
     constructor(initialObject?: Record<any, V> | Map<K, V>) {
-        this._inner = initialObject
+        super();
+        this[MobxLateInitInnerSymbol] = initialObject
             ? initialObject instanceof Map || isObservableMap(initialObject)
                 ? initialObject
                 : new Map(Object.entries(initialObject))
             : new Map();
-        // hide _inner on the object
-        Object.defineProperty(this, '_inner', {
-            enumerable: false,
-        });
-    }
-
-    public get(k: K): V | undefined {
-        this.ensureWrapped();
-
-        return this._inner.get(k);
     }
 
     public set(k: K, v: V): this {
-        this._inner.set(k, wrapObservable(v));
+        this[MobxLateInitInnerSymbol].set(k, wrapObservable(v));
         return this;
     }
 
-    public has(k: K): boolean {
+    public get size(): number {
         this.ensureWrapped();
-        return this._inner.has(k);
-    }
-
-    public delete(k: K): boolean {
-        return this._inner.delete(k);
-    }
-
-    public entries(): IterableIterator<[K, V]> {
-        this.ensureWrapped();
-        return this._inner.entries();
-    }
-
-    public keys(): IterableIterator<K> {
-        this.ensureWrapped();
-        return this._inner.keys();
-    }
-
-    public values(): IterableIterator<V> {
-        this.ensureWrapped();
-        return this._inner.values();
+        return this[MobxLateInitInnerSymbol].size;
     }
 
     public forEach(cb: (v: V, k: K, map: Map<K, V>) => void): void {
         this.ensureWrapped();
-        return this._inner.forEach((v, k) => {
+        return this[MobxLateInitInnerSymbol].forEach((v, k) => {
             cb(v, k, this as any);
         });
-    }
-
-    public get size() {
-        this.ensureWrapped();
-        return this._inner.size;
     }
 
     [Symbol.iterator]() {
         return this.entries();
     }
 
-    private ensureWrapped() {
-        if (!isObservable(this._inner)) {
-            this._inner = observable.map(this._inner, {
-                deep: false,
-            });
+    ensureWrapped() {
+        if (!isObservable(this[MobxLateInitInnerSymbol])) {
+            this[MobxLateInitInnerSymbol] = observable.map(
+                this[MobxLateInitInnerSymbol],
+                {
+                    deep: false,
+                },
+            );
         }
     }
 }
 
+type MapAnyProto = typeof Map.prototype;
+type OnDemandObservableMapProto = typeof _OnDemandObservableMap.prototype;
+const wrapMapMethod = <TKey extends keyof MapAnyProto>(
+    name: TKey,
+    isAccessor?: boolean,
+) =>
+    wrapMethod<
+        _OnDemandObservableMap<unknown, unknown>,
+        OnDemandObservableMapProto,
+        MapAnyProto,
+        TKey
+    >(_OnDemandObservableMap.prototype, Map.prototype, name, isAccessor);
+
+interface _OnDemandObservableMap<K, V> extends Map<K, V> {}
+
 // Trick mobx internals into treating this as an observable map
-Object.defineProperty(OnDemandObservableMap.prototype, 'isMobXObservableMap', {
+Object.defineProperty(_OnDemandObservableMap.prototype, 'isMobXObservableMap', {
     enumerable: false,
     get: () => true,
 });
+
+// Map accessor methods
+wrapMapMethod('entries', true);
+wrapMapMethod('keys', true);
+wrapMapMethod('values', true);
+wrapMapMethod('get', true);
+wrapMapMethod('has', true);
+
+// Map writer methods
+wrapMapMethod('delete');
+
+export const OnDemandObservableMap = _OnDemandObservableMap;
+export type OnDemandObservableMap<K, V> = _OnDemandObservableMap<K, V>;

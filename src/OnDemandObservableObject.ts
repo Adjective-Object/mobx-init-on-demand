@@ -1,7 +1,8 @@
 import { observable, decorate, transaction, isObservable } from 'mobx';
-import { MobxLateInitWrappedSymbol } from './constants';
+import { MobxLateInitInnerSymbol } from './constants';
 import { isOnDemandObservable } from './isOnDemandObservable';
 import { wrapObservable } from './wrapWithDI';
+import { OnDemandObservable } from './OnDemandObservable';
 
 export function isObject(value: any): value is object {
     return value !== null && typeof value === 'object';
@@ -10,17 +11,14 @@ export function isObject(value: any): value is object {
 /**
  * Wraps a shallow mobx observable object and initializes only those
  * properties
- *
- * Properties with scalar values are stored on the actual ._internal object.
- *
- * When first read, properties with non-scalar values are put in the _wrappedInternal map,
- * and wrapped in another MobxLateInitObservableObject
  */
-export class OnDemandObservableObject<T extends object> {
+export class OnDemandObservableObject<
+    T extends object
+> extends OnDemandObservable<T> {
     /**
-     * Scalar values are stored here
+     * This is a lazily shallow wrapped inner object, storing T
      */
-    _internal: any;
+    [MobxLateInitInnerSymbol]: T;
 
     static wrap<T extends object>(wrappedObject: T): T {
         if (!isObject(wrappedObject)) {
@@ -43,7 +41,8 @@ export class OnDemandObservableObject<T extends object> {
             });
         }
 
-        Object.defineProperty(proxyObject, MobxLateInitWrappedSymbol, {
+        // define accessors on this object that proxy property reads
+        Object.defineProperty(proxyObject, MobxLateInitInnerSymbol, {
             get: () => true,
             enumerable: false,
         });
@@ -52,25 +51,27 @@ export class OnDemandObservableObject<T extends object> {
     }
 
     private constructor(wrappedObject: T) {
-        this._internal = wrappedObject;
+        super();
+        this[MobxLateInitInnerSymbol] = wrappedObject;
     }
 
     private _readProperty(propertyName: keyof T) {
-        this.ensureDecorated();
-
         // If the value is stored as a scalar, just return it
-        if (!isObject(this._internal[propertyName])) {
-            return this._internal[propertyName];
+        this.ensureWrapped();
+        const oldValue = this[MobxLateInitInnerSymbol][propertyName];
+        if (!isObject(oldValue)) {
+            return this[MobxLateInitInnerSymbol][propertyName];
         }
 
         // If the object is not wrapped yet, wrap it.
-        if (!isOnDemandObservable(this._internal[propertyName])) {
-            this._internal[propertyName] = wrapObservable(
-                this._internal[propertyName],
+        // Set it before wrapping the parent object in observable
+        if (!isOnDemandObservable(oldValue)) {
+            this[MobxLateInitInnerSymbol][propertyName] = wrapObservable(
+                oldValue,
             );
         }
 
-        return this._internal[propertyName];
+        return this[MobxLateInitInnerSymbol][propertyName];
     }
 
     private _writeProperty<TKey extends keyof T>(
@@ -82,27 +83,32 @@ export class OnDemandObservableObject<T extends object> {
         transaction(() => {
             if (!isObject(newValue)) {
                 // we are writing a scalar
-                this._internal[propertyName] = newValue;
+                this[MobxLateInitInnerSymbol][propertyName] = newValue;
                 return;
             }
 
             // we are writing an object
-            this._internal[propertyName] = isOnDemandObservable(newValue)
+            this[MobxLateInitInnerSymbol][propertyName] = isOnDemandObservable(
+                newValue,
+            )
                 ? newValue
                 : (wrapObservable(newValue) as any);
         });
     }
 
-    private ensureDecorated() {
-        if (isObservable(this)) {
+    ensureWrapped() {
+        if (isObservable(this[MobxLateInitInnerSymbol])) {
             return;
         }
 
-        // initialize this with decorate after values have been set,
-        // because otherwise we trigger an extra mobx update trigger
-        // when we set the values above.
-        decorate(this, {
-            _internal: observable.shallow,
-        });
+        this[MobxLateInitInnerSymbol] = observable.object(
+            // Copy the object when we wrap, so that the original copy
+            // that we pass in isn't mutated by mobx.
+            { ...this[MobxLateInitInnerSymbol] },
+            undefined, //decorators
+            {
+                deep: false,
+            },
+        );
     }
 }

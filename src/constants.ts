@@ -1,1 +1,1 @@
-export const MobxLateInitWrappedSymbol = Symbol('mlioo.wrapped');
+export const MobxLateInitInnerSymbol = Symbol('mlioo._inner');

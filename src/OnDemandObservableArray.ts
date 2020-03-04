@@ -1,7 +1,9 @@
 import { observable, decorate, transaction, isObservable } from 'mobx';
 import { isOnDemandObservable } from './isOnDemandObservable';
 import { wrapObservable } from './wrapWithDI';
-import { MobxLateInitWrappedSymbol } from './constants';
+import { wrapMethod, FunctionKeys } from './wrapMethod';
+import { OnDemandObservable } from './OnDemandObservable';
+import { MobxLateInitInnerSymbol } from './constants';
 
 export function isObject(value: any): value is object {
     return value !== null && typeof value === 'object';
@@ -11,16 +13,13 @@ export function isObject(value: any): value is object {
  * Wraps a shallow mobx observable object and initializes only those
  * properties
  *
- * Properties with scalar values are stored on the actual ._internal object.
+ * Properties with scalar values are stored on the actual ._inner object.
  *
  * When first read, properties with non-scalar values are put in the _wrappedInternal map,
  * and wrapped in another MobxLateInitObservableObject
  */
-class _OnDemandObservableArray<T> implements Array<T> {
-    /**
-     * Internal lazily-initialized observable
-     */
-    _internal: Array<T>;
+class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
+    implements Array<T> {
     /**
      * Used to track if we need to define new accessors when
      * the underlying array changes.
@@ -28,21 +27,29 @@ class _OnDemandObservableArray<T> implements Array<T> {
     _maxLength: number = 0;
 
     constructor(wrappedObject: Array<T>) {
-        this._internal = wrappedObject;
+        super();
+        this[MobxLateInitInnerSymbol] = wrappedObject;
         this._defineAccessorsIfNeeded();
-
-        Object.defineProperty(this, '_internal', {
-            enumerable: false,
-        });
-
+        // hide _maxLength on array
         Object.defineProperty(this, '_maxLength', {
             enumerable: false,
         });
     }
 
+    /**
+     * Called after a wrapped non-accessor method is called.
+     */
+    _onAfterNonAcessorMethod() {
+        this._defineAccessorsIfNeeded();
+    }
+
     private _defineAccessorsIfNeeded() {
-        if (this._internal.length > this._maxLength) {
-            for (let i = this._internal.length - 1; i >= this._maxLength; i--) {
+        if (this[MobxLateInitInnerSymbol].length > this._maxLength) {
+            for (
+                let i = this[MobxLateInitInnerSymbol].length - 1;
+                i >= this._maxLength;
+                i--
+            ) {
                 Object.defineProperty(this, i, {
                     get: this._readProperty.bind(this, i),
                     set: this._writeProperty.bind(this, i),
@@ -51,19 +58,23 @@ class _OnDemandObservableArray<T> implements Array<T> {
                     configurable: true,
                 });
             }
-            this._maxLength = this._internal.length;
-        } else if (this._internal.length < this._maxLength) {
-            for (let i = this._internal.length; i < this._maxLength; i++) {
+            this._maxLength = this[MobxLateInitInnerSymbol].length;
+        } else if (this[MobxLateInitInnerSymbol].length < this._maxLength) {
+            for (
+                let i = this[MobxLateInitInnerSymbol].length;
+                i < this._maxLength;
+                i++
+            ) {
                 delete this[i];
             }
-            this._maxLength = this._internal.length;
+            this._maxLength = this[MobxLateInitInnerSymbol].length;
         }
     }
 
     private _readProperty(index: number) {
-        this.ensureDecorated();
+        this.ensureWrapped();
 
-        const readProp = this._internal[index];
+        const readProp = this[MobxLateInitInnerSymbol][index];
 
         // If the value is stored as a scalar, just return it
         if (!isObject(readProp)) {
@@ -72,10 +83,12 @@ class _OnDemandObservableArray<T> implements Array<T> {
 
         // If the object is not wrapped yet, wrap it.
         if (!isOnDemandObservable(readProp)) {
-            this._internal[index] = wrapObservable(this._internal[index]);
+            this[MobxLateInitInnerSymbol][index] = wrapObservable(
+                this[MobxLateInitInnerSymbol][index],
+            );
         }
 
-        return this._internal[index];
+        return this[MobxLateInitInnerSymbol][index];
     }
 
     private _writeProperty(index: number, newValue: T) {
@@ -84,69 +97,52 @@ class _OnDemandObservableArray<T> implements Array<T> {
         transaction(() => {
             if (!isObject(newValue)) {
                 // we are writing a scalar
-                this._internal[index] = newValue;
+                this[MobxLateInitInnerSymbol][index] = newValue;
                 return;
             }
 
             // we are writing an object
-            this._internal[index] = isOnDemandObservable(newValue)
+            this[MobxLateInitInnerSymbol][index] = isOnDemandObservable(
+                newValue,
+            )
                 ? newValue
                 : (wrapObservable(newValue) as any);
         });
     }
 
-    private ensureDecorated() {
-        if (isObservable(this)) {
+    ensureWrapped() {
+        if (isObservable(this[MobxLateInitInnerSymbol])) {
             return;
         }
 
-        // initialize this with decorate after values have been set,
-        // because otherwise we trigger an extra mobx update trigger
-        // when we set the values above.
-        decorate(this, {
-            _internal: observable.shallow,
-        });
+        this[MobxLateInitInnerSymbol] = observable(
+            this[MobxLateInitInnerSymbol],
+            {
+                deep: false,
+            },
+        );
     }
 
     [Symbol.iterator]() {
-        this.ensureDecorated();
-        return this._internal[Symbol.iterator]();
+        this.ensureWrapped();
+        return this[MobxLateInitInnerSymbol][Symbol.iterator]();
     }
 }
 
-type ArgsOf<TFunc> = TFunc extends (...args: infer TArgs) => any
-    ? TArgs
-    : never;
-type ReturnOf<TFunc> = TFunc extends (...args: any[]) => infer TReturn
-    ? TReturn
-    : never;
-
-interface _OnDemandObservableArray<T> extends Array<T> {}
-
-function wrapArrayMethod<TKey extends keyof Array<any>>(
+type ArrayAnyProto = typeof Array.prototype;
+type OnDemandObservableArrayProto = typeof _OnDemandObservableArray.prototype;
+const wrapArrayMethod = <TKey extends keyof ArrayAnyProto>(
     name: TKey,
     isAccessor?: boolean,
-) {
-    (_OnDemandObservableArray.prototype as any)[name] = function<TValue>(
-        this: _OnDemandObservableArray<TValue>,
-        ...args: ArgsOf<Array<TValue>[TKey]>
-    ): ReturnOf<Array<TValue>[TKey]> {
-        if (isAccessor) {
-            (this as any).ensureDecorated();
-        }
+) =>
+    wrapMethod<
+        _OnDemandObservableArray<unknown>,
+        OnDemandObservableArrayProto,
+        ArrayAnyProto,
+        TKey
+    >(_OnDemandObservableArray.prototype, Array.prototype, name, isAccessor);
 
-        const toRet = Array.prototype[name].apply(this._internal, args);
-
-        if (!isAccessor) {
-            (this as any)._defineAccessorsIfNeeded();
-        }
-
-        return toRet;
-    };
-    Object.defineProperty(_OnDemandObservableArray.prototype, name, {
-        enumerable: false,
-    });
-}
+interface _OnDemandObservableArray<T> extends Array<T> {}
 
 // Writers
 wrapArrayMethod('copyWithin');
@@ -182,15 +178,6 @@ wrapArrayMethod('reduce', true);
 wrapArrayMethod('reduceRight', true);
 wrapArrayMethod('some', true);
 wrapArrayMethod('values', true);
-
-Object.defineProperty(
-    _OnDemandObservableArray.prototype,
-    MobxLateInitWrappedSymbol,
-    {
-        get: () => true,
-        enumerable: false,
-    },
-);
 
 export const OnDemandObservableArray = _OnDemandObservableArray;
 export type OnDemandObservableArray<T> = _OnDemandObservableArray<T>;

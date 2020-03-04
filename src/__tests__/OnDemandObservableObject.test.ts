@@ -203,6 +203,33 @@ describe('OnDemandObservableObject', () => {
         });
     });
 
+    it('triggers observers when changing from scalar => object => scalar', () => {
+        // Arrange
+        const wrappedObservable: any = OnDemandObservableObject.wrap({
+            a: 1,
+        });
+
+        const observedValues: number[] = [];
+        disposer = autorun(() => {
+            observedValues.push(wrappedObservable.a);
+        });
+
+        // Act
+        wrappedObservable.a = {
+            b: 1,
+        };
+        wrappedObservable.a = 2;
+
+        // Assert
+        expect(observedValues).toEqual([
+            1,
+            {
+                b: 1,
+            },
+            2,
+        ]);
+    });
+
     describe("changing the type of a property over the object's lifetime from object => scalar", () => {
         it('reads the updated value', () => {
             // Arrange
