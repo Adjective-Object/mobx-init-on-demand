@@ -1,6 +1,6 @@
 {
     "name": "mobx-init-on-demand",
-    "version": "0.0.7",
+    "version": "0.0.8-alpha.1",
     "author": "Max Huang-Hobbs <mhuan13@gmail.com>",
     "license": "MIT",
     "main": "dist/index.js",
