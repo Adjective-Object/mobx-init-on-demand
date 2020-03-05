@@ -1,13 +1,10 @@
-import { observable, decorate, transaction, isObservable } from 'mobx';
+import { observable, transaction } from 'mobx';
 import { isOnDemandObservable } from './isOnDemandObservable';
 import { wrapObservable } from './wrapWithDI';
-import { wrapMethod, FunctionKeys } from './wrapMethod';
+import { wrapMethod } from './wrapMethod';
 import { OnDemandObservable } from './OnDemandObservable';
 import { MobxLateInitInnerSymbol } from './constants';
-
-export function isObject(value: any): value is object {
-    return value !== null && typeof value === 'object';
-}
+import { isObject } from './isObject';
 
 /**
  * Wraps a shallow mobx observable object and initializes only those
@@ -110,11 +107,7 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
         });
     }
 
-    ensureWrapped() {
-        if (isObservable(this[MobxLateInitInnerSymbol])) {
-            return;
-        }
-
+    wrap() {
         this[MobxLateInitInnerSymbol] = observable(
             this[MobxLateInitInnerSymbol],
             {

@@ -96,11 +96,7 @@ export class OnDemandObservableObject<
         });
     }
 
-    ensureWrapped() {
-        if (isObservable(this[MobxLateInitInnerSymbol])) {
-            return;
-        }
-
+    wrap() {
         this[MobxLateInitInnerSymbol] = observable.object(
             // Copy the object when we wrap, so that the original copy
             // that we pass in isn't mutated by mobx.

@@ -2,6 +2,8 @@ import { ObservableMap, isObservableMap, isObservable, observable } from 'mobx';
 import { OnDemandObservable } from './OnDemandObservable';
 import { MobxLateInitInnerSymbol } from './constants';
 import { wrapMethod } from './wrapMethod';
+import { isOnDemandObservable } from './isOnDemandObservable';
+import { isObject } from './isObject';
 import { wrapObservable } from './wrapWithDI';
 
 class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
@@ -17,9 +19,20 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
             : new Map();
     }
 
-    public set(k: K, v: V): this {
-        this[MobxLateInitInnerSymbol].set(k, wrapObservable(v));
-        return this;
+    public get(k: K): V | undefined {
+        const _inner = this[MobxLateInitInnerSymbol];
+        let valueFromInnerMap = _inner.get(k);
+        this.ensureWrapped();
+        if (
+            isObject(valueFromInnerMap) &&
+            !isOnDemandObservable(valueFromInnerMap)
+        ) {
+            const wrappedValueFromInnerMap = wrapObservable(valueFromInnerMap);
+            _inner.set(k, wrappedValueFromInnerMap);
+            return wrappedValueFromInnerMap;
+        }
+
+        return valueFromInnerMap;
     }
 
     public get size(): number {
@@ -38,15 +51,13 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
         return this.entries();
     }
 
-    ensureWrapped() {
-        if (!isObservable(this[MobxLateInitInnerSymbol])) {
-            this[MobxLateInitInnerSymbol] = observable.map(
-                this[MobxLateInitInnerSymbol],
-                {
-                    deep: false,
-                },
-            );
-        }
+    wrap() {
+        this[MobxLateInitInnerSymbol] = observable.map(
+            this[MobxLateInitInnerSymbol],
+            {
+                deep: false,
+            },
+        );
     }
 }
 
@@ -75,11 +86,11 @@ Object.defineProperty(_OnDemandObservableMap.prototype, 'isMobXObservableMap', {
 wrapMapMethod('entries', true);
 wrapMapMethod('keys', true);
 wrapMapMethod('values', true);
-wrapMapMethod('get', true);
 wrapMapMethod('has', true);
 
 // Map writer methods
 wrapMapMethod('delete');
+wrapMapMethod('set');
 
 export const OnDemandObservableMap = _OnDemandObservableMap;
 export type OnDemandObservableMap<K, V> = _OnDemandObservableMap<K, V>;
