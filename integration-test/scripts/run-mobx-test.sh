@@ -71,7 +71,7 @@ echo " FETCHING DEPENDENCIES"
 echo "=================================="
 set -x
 
-yarn
+NODE_ENV="development" yarn install
 yarn link --link-folder=$LINKDIR mobx
 
 set +x
