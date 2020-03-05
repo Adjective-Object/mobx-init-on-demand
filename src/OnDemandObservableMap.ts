@@ -20,9 +20,9 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
     }
 
     public get(k: K): V | undefined {
+        this.ensureWrapped();
         const _inner = this[MobxLateInitInnerSymbol];
         let valueFromInnerMap = _inner.get(k);
-        this.ensureWrapped();
         if (
             isObject(valueFromInnerMap) &&
             !isOnDemandObservable(valueFromInnerMap)
