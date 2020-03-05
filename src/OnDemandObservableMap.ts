@@ -20,7 +20,7 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
     }
 
     public get(k: K): V | undefined {
-        this.ensureWrapped();
+        this._ensureWrapped();
         const _inner = this[MobxLateInitInnerSymbol];
         let valueFromInnerMap = _inner.get(k);
         if (
@@ -36,12 +36,12 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
     }
 
     public get size(): number {
-        this.ensureWrapped();
+        this._ensureWrapped();
         return this[MobxLateInitInnerSymbol].size;
     }
 
     public forEach(cb: (v: V, k: K, map: Map<K, V>) => void): void {
-        this.ensureWrapped();
+        this._ensureWrapped();
         return this[MobxLateInitInnerSymbol].forEach((v, k) => {
             cb(v, k, this as any);
         });
@@ -51,7 +51,7 @@ class _OnDemandObservableMap<K = any, V = any> extends OnDemandObservable<
         return this.entries();
     }
 
-    wrap() {
+    _wrap() {
         this[MobxLateInitInnerSymbol] = observable.map(
             this[MobxLateInitInnerSymbol],
             {

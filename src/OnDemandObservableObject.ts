@@ -57,7 +57,7 @@ export class OnDemandObservableObject<
 
     private _readProperty(propertyName: keyof T) {
         // If the value is stored as a scalar, just return it
-        this.ensureWrapped();
+        this._ensureWrapped();
         const oldValue = this[MobxLateInitInnerSymbol][propertyName];
         if (!isObject(oldValue)) {
             return this[MobxLateInitInnerSymbol][propertyName];
@@ -96,7 +96,7 @@ export class OnDemandObservableObject<
         });
     }
 
-    wrap() {
+    _wrap() {
         this[MobxLateInitInnerSymbol] = observable.object(
             // Copy the object when we wrap, so that the original copy
             // that we pass in isn't mutated by mobx.

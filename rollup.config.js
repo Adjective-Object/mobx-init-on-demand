@@ -36,7 +36,7 @@ function getConfig({ isProd }) {
                     mangle: {
                         toplevel: true,
                         properties: {
-                            reserved: ['isMobXObservableMap'],
+                            regex: /^_/,
                         },
                     },
                 }),

@@ -20,15 +20,15 @@ export abstract class OnDemandObservable<TWrapped> {
         }
     }
 
-    abstract wrap(): void;
+    abstract _wrap(): void;
 
-    ensureWrapped(): void {
+    _ensureWrapped(): void {
         if (!this[MobxLateInitWrittenSymbol]) {
             this[MobxLateInitWrittenSymbol] = true;
             if (process.env.NODE_ENV !== 'production') {
                 onOnDemandObservableWrapped(this);
             }
-            this.wrap();
+            this._wrap();
         }
     }
     _onAfterNonAcessorMethod(): void {}

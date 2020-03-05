@@ -69,7 +69,7 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
     }
 
     private _readProperty(index: number) {
-        this.ensureWrapped();
+        this._ensureWrapped();
 
         const readProp = this[MobxLateInitInnerSymbol][index];
 
@@ -107,7 +107,7 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
         });
     }
 
-    wrap() {
+    _wrap() {
         this[MobxLateInitInnerSymbol] = observable(
             this[MobxLateInitInnerSymbol],
             {
@@ -117,7 +117,7 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
     }
 
     [Symbol.iterator]() {
-        this.ensureWrapped();
+        this._ensureWrapped();
         return this[MobxLateInitInnerSymbol][Symbol.iterator]();
     }
 }
