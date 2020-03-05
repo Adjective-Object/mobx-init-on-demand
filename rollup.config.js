@@ -1,7 +1,6 @@
 // @ts-check
 import rollupTypescriptPlugin from 'rollup-plugin-typescript2';
 import rollupReplacePlugin from 'rollup-plugin-replace';
-import rollupCopyPlugin from 'rollup-plugin-copy';
 import { terser as rollupTerserPlugin } from 'rollup-plugin-terser';
 import pkg from './package.json';
 
@@ -46,7 +45,7 @@ function getConfig({ isProd }) {
 }
 
 export default [
-    // Entrypoint cjs
+    // Entrypoints for js and cjs
     {
         input: 'src/cjs-common-entrypoint.js',
         output: {
@@ -54,16 +53,6 @@ export default [
             format: 'cjs',
         },
         external: ['./index.prod.js', './index.dev.js'],
-        plugins: [
-            rollupCopyPlugin({
-                targets: [
-                    {
-                        src: 'src/index.d.ts',
-                        dest: 'dist',
-                    },
-                ],
-            }),
-        ],
     },
     // Actual build
     getConfig({
