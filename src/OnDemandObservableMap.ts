@@ -78,7 +78,6 @@ interface _OnDemandObservableMap<K, V> extends Map<K, V> {}
 
 // Trick mobx internals into treating this as an observable map
 Object.defineProperty(_OnDemandObservableMap.prototype, 'isMobXObservableMap', {
-    enumerable: false,
     get: () => true,
 });
 

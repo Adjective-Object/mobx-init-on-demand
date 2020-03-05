@@ -21,14 +21,14 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
      * Used to track if we need to define new accessors when
      * the underlying array changes.
      */
-    _maxLength: number = 0;
+    _m: number = 0;
 
     constructor(wrappedObject: Array<T>) {
         super();
         this[MobxLateInitInnerSymbol] = wrappedObject;
         this._defineAccessorsIfNeeded();
-        // hide _maxLength on array
-        Object.defineProperty(this, '_maxLength', {
+        // hide _m on array
+        Object.defineProperty(this, '_m', {
             enumerable: false,
         });
     }
@@ -41,10 +41,10 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
     }
 
     private _defineAccessorsIfNeeded() {
-        if (this[MobxLateInitInnerSymbol].length > this._maxLength) {
+        if (this[MobxLateInitInnerSymbol].length > this._m) {
             for (
                 let i = this[MobxLateInitInnerSymbol].length - 1;
-                i >= this._maxLength;
+                i >= this._m;
                 i--
             ) {
                 Object.defineProperty(this, i, {
@@ -55,16 +55,16 @@ class _OnDemandObservableArray<T> extends OnDemandObservable<Array<T>>
                     configurable: true,
                 });
             }
-            this._maxLength = this[MobxLateInitInnerSymbol].length;
-        } else if (this[MobxLateInitInnerSymbol].length < this._maxLength) {
+            this._m = this[MobxLateInitInnerSymbol].length;
+        } else if (this[MobxLateInitInnerSymbol].length < this._m) {
             for (
                 let i = this[MobxLateInitInnerSymbol].length;
-                i < this._maxLength;
+                i < this._m;
                 i++
             ) {
                 delete this[i];
             }
-            this._maxLength = this[MobxLateInitInnerSymbol].length;
+            this._m = this[MobxLateInitInnerSymbol].length;
         }
     }
 

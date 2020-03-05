@@ -31,7 +31,15 @@ function getConfig({ isProd }) {
                 rollupReplacePlugin({
                     'process.env.NODE_ENV': JSON.stringify('production'),
                 }),
-            isProd && rollupTerserPlugin(),
+            isProd &&
+                rollupTerserPlugin({
+                    mangle: {
+                        toplevel: true,
+                        properties: {
+                            regex: /^isMobX.*/,
+                        },
+                    },
+                }),
         ],
     };
 }

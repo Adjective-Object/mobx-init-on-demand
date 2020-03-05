@@ -5,7 +5,9 @@ let _wrapObservable = function uninitializedWrapObservable(
     ...args: any[]
 ): any {
     throw new Error(
-        'wrapObservable not initialized. Did you forget to import from the package index?',
+        process.env.NODE_ENV === 'production'
+            ? 'wOni'
+            : 'wrapObservable not initialized. Did you forget to import from the package index?',
     );
 };
 export function wrapObservable(this: any, ...args: any[]): any {
