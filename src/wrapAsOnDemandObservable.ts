@@ -1,4 +1,10 @@
-import { observable, ObservableSet } from 'mobx';
+import {
+    observable,
+    ObservableSet,
+    isObservableMap,
+    isObservableArray,
+    isObservableSet,
+} from 'mobx';
 import { OnDemandObservableMap } from './OnDemandObservableMap';
 import { OnDemandObservableObject } from './OnDemandObservableObject';
 import { OnDemandObservableArray } from './OnDemandObservableArray';
@@ -14,11 +20,11 @@ export function wrapAsOnDemandObservable<T>(
 export function wrapAsOnDemandObservable<T extends object>(x: T): T;
 
 export function wrapAsOnDemandObservable(x: any) {
-    if (Array.isArray(x)) {
+    if (Array.isArray(x) || isObservableArray(x)) {
         return new OnDemandObservableArray(x);
-    } else if (x instanceof Set) {
+    } else if (x instanceof Set || isObservableSet(x)) {
         return observable.set(x);
-    } else if (x instanceof Map) {
+    } else if (x instanceof Map || isObservableMap(x)) {
         return new OnDemandObservableMap(x);
     } else if (isObject(x)) {
         return OnDemandObservableObject.wrap(x);
